@@ -1,43 +1,73 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
 import pdfplumber
-import io
+from io import BytesIO
+
+# Load environment variables
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
-# Allow frontend (localhost:3000) to talk to this backend
+# Allow frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+@app.post("/summarize/")
+async def summarize_pdf(file: UploadFile = File(...)):
     try:
-        contents = await file.read()
-        pdf = pdfplumber.open(io.BytesIO(contents))
+        # Read and extract text from PDF
+        file_bytes = await file.read()
+        with pdfplumber.open(BytesIO(file_bytes)) as pdf:
+            text = ""
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
 
-        full_text = ""
-        for page in pdf.pages:
-            full_text += page.extract_text() + "\n"
-        pdf.close()
+        if not text.strip():
+            return {"error": "No readable text found in the PDF."}
 
-        # Mock summary logic (split into concept cards)
-        summary = [
-            {
-                "title": "Summary Block 1",
-                "summary": full_text[:300] + "..."  # just a preview
-            },
-            {
-                "title": "Summary Block 2",
-                "summary": "This is a placeholder for a second summary point."
-            }
-        ]
+        # Create AI prompt
+        prompt = f"""
+You are an AI teacher. Break down the following notes into clear and engaging teaching cards.
+Each card should explain:
+- What the concept is
+- Why it matters
+- Any tips/formulas
+- A motivating example if useful
 
-        return JSONResponse(content={"summary": summary})
+TEXT:
+{text[:3000]}
+        """
+
+        # Request summary from GPT-3.5
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a patient, exam-focused AI teacher."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        summary_text = response.choices[0].message.content.strip()
+
+        return {
+            "summary": [
+                {
+                    "title": "Summary Block 1",
+                    "summary": summary_text
+                }
+            ]
+        }
 
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        return {"error": str(e)}
