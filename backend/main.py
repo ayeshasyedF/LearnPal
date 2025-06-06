@@ -6,13 +6,11 @@ import os
 import pdfplumber
 from io import BytesIO
 
-# Load environment variables
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
-# Allow frontend requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,53 +19,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/summarize/")
-async def summarize_pdf(file: UploadFile = File(...)):
-    try:
-        # Read and extract text from PDF
-        file_bytes = await file.read()
-        with pdfplumber.open(BytesIO(file_bytes)) as pdf:
-            text = ""
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
+def outline_prompt(text: str) -> str:
+    return f"""
+You are an expert note-taker. For the text below, extract:
+- The MAIN topic (as a string)
+- A 1-2 sentence OVERVIEW (as a string)
+- 4-10 major topics/subtopics (as a simple list)
+Respond ONLY in JSON, for example:
+{{
+  "main_topic": "Red-Black Trees",
+  "overview": "Red-black trees are balanced search trees used in CS...",
+  "topics": [
+    "Properties of Red-Black Trees",
+    "Insertion",
+    "Deletion",
+    "Rotations",
+    "Applications"
+  ]
+}}
+LECTURE NOTES:
+{text[:4000]}
+"""
 
-        if not text.strip():
-            return {"error": "No readable text found in the PDF."}
+@app.post("/outline/")
+async def extract_outline(file: UploadFile = File(...)):
+    file_bytes = await file.read()
+    with pdfplumber.open(BytesIO(file_bytes)) as pdf:
+        text = ""
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+    if not text.strip():
+        return {"error": "No readable text found in the PDF."}
 
-        # Create AI prompt
-        prompt = f"""
-You are an AI teacher. Break down the following notes into clear and engaging teaching cards.
-Each card should explain:
-- What the concept is
-- Why it matters
-- Any tips/formulas
-- A motivating example if useful
-
-TEXT:
-{text[:3000]}
-        """
-
-        # Request summary from GPT-3.5
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a patient, exam-focused AI teacher."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-
-        summary_text = response.choices[0].message.content.strip()
-
-        return {
-            "summary": [
-                {
-                    "title": "Summary Block 1",
-                    "summary": summary_text
-                }
-            ]
-        }
-
-    except Exception as e:
-        return {"error": str(e)}
+    prompt = outline_prompt(text)
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "Extract only outline as JSON. No extra text."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    raw = response.choices[0].message.content.strip()
+    # Try to parse code blocks or smart quotes if present
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+    raw = raw.replace("“", "\"").replace("”", "\"")
+    return {"outline": raw}
