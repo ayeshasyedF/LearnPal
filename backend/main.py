@@ -19,25 +19,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def outline_prompt(text: str) -> str:
+def cheeky_ta_prompt(text: str) -> str:
     return f"""
-You are an expert note-taker. For the text below, extract:
-- The MAIN topic (as a string)
-- A 1-2 sentence OVERVIEW (as a string)
-- 4-10 major topics/subtopics (as a simple list)
-Respond ONLY in JSON, for example:
-{{
-  "main_topic": "Red-Black Trees",
-  "overview": "Red-black trees are balanced search trees used in CS...",
-  "topics": [
-    "Properties of Red-Black Trees",
-    "Insertion",
-    "Deletion",
-    "Rotations",
-    "Applications"
-  ]
-}}
-LECTURE NOTES:
+I’m giving you a structured or, for that matter, an unstructured or poorly-organized lecture extract.
+Your mission: Summarize the main topics and subtopics, even if you have to reorganize or re-interpret the flow to make it logical for a student.
+
+Cheeky TA Style Guide:
+
+Use your intelligence to:
+
+Identify main topics and subtopics.
+Reorder and group the material logically (teach the basics before the advanced, fill in gaps if needed, skip redundancy).
+Only introduce advanced concepts after the foundational ones.
+For each topic:
+Give a quick, playful summary (“What’s the big idea here?”).
+Break it into subtopics as needed, with fun, memorable headings.
+Explain clearly, step by step, in simple language.
+List the most important takeaways for each subtopic as bullet points.
+End with a cheeky recap or a playful quiz.
+Make transitions obvious and fun (“Now that you’ve survived that, let’s tackle the next thing!”).
+Prioritize clarity and learning flow over sticking to the original order.
+Keep your tone playful, witty, and never boring.
+
+Your task:
+Using this guide, summarize and reorganize the following lecture content for a student who wants to actually understand the material:
+
+LECTURE TEXT:
 {text[:4000]}
 """
 
@@ -53,17 +60,13 @@ async def extract_outline(file: UploadFile = File(...)):
     if not text.strip():
         return {"error": "No readable text found in the PDF."}
 
-    prompt = outline_prompt(text)
+    prompt = cheeky_ta_prompt(text)
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "Extract only outline as JSON. No extra text."},
+            {"role": "system", "content": "Summarize and reorganize as instructed. Prioritize clarity and flow. Keep it playful and witty."},
             {"role": "user", "content": prompt}
         ]
     )
-    raw = response.choices[0].message.content.strip()
-    # Try to parse code blocks or smart quotes if present
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-    raw = raw.replace("“", "\"").replace("”", "\"")
-    return {"outline": raw}
+    result = response.choices[0].message.content.strip()
+    return {"outline": result}
