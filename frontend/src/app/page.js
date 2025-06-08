@@ -1,10 +1,15 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 const API_URL = "http://localhost:8000";
 
-const colorBg = "bg-gradient-to-br from-purple-200 via-purple-300 to-purple-600 min-h-screen";
+const colorBg =
+  "bg-gradient-to-br from-purple-200 via-purple-300 to-purple-600 min-h-screen";
 const panelBg = "bg-white bg-opacity-70 rounded-2xl shadow-2xl p-8";
 
 export default function Page() {
@@ -22,7 +27,9 @@ export default function Page() {
     axios
       .get(`${API_URL}/courses`)
       .then((res) => setCourses(res.data))
-      .catch(() => setError("Could not load courses, did you start the backend?"));
+      .catch(() =>
+        setError("Could not load courses, did you start the backend?")
+      );
   }, []);
 
   useEffect(() => {
@@ -43,7 +50,9 @@ export default function Page() {
 
   const handleCheckbox = (topic) => {
     setCheckedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
+      prev.includes(topic)
+        ? prev.filter((t) => t !== topic)
+        : [...prev, topic]
     );
   };
 
@@ -67,7 +76,11 @@ export default function Page() {
   };
 
   return (
-    <div className={colorBg + " flex flex-col items-center justify-center py-12"}>
+    <div
+      className={
+        colorBg + " flex flex-col items-center justify-center py-12"
+      }
+    >
       <div className={panelBg + " max-w-2xl w-full"}>
         <h1 className="text-4xl font-black text-purple-800 mb-2 tracking-tight drop-shadow-lg">
           LearnPal 😛
@@ -79,7 +92,9 @@ export default function Page() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Faculty Dropdown */}
           <div>
-            <label className="font-bold text-purple-700">Pick your engineering type</label>
+            <label className="font-bold text-purple-700">
+              Pick your engineering type
+            </label>
             <select
               className="w-full mt-1 rounded-xl border border-purple-300 p-2 focus:ring-2 focus:ring-purple-400"
               value={faculty}
@@ -97,7 +112,9 @@ export default function Page() {
           {/* Course Dropdown */}
           {faculty && (
             <div>
-              <label className="font-bold text-purple-700">Pick your course</label>
+              <label className="font-bold text-purple-700">
+                Pick your course
+              </label>
               <select
                 className="w-full mt-1 rounded-xl border border-purple-300 p-2 focus:ring-2 focus:ring-purple-400"
                 value={course}
@@ -121,7 +138,10 @@ export default function Page() {
               </label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {topics.map((t) => (
-                  <label key={t} className="bg-purple-100 px-3 py-1 rounded-xl text-sm flex items-center cursor-pointer">
+                  <label
+                    key={t}
+                    className="bg-purple-100 px-3 py-1 rounded-xl text-sm flex items-center cursor-pointer"
+                  >
                     <input
                       type="checkbox"
                       className="accent-purple-500 mr-2"
@@ -159,14 +179,26 @@ export default function Page() {
             {error}
           </div>
         )}
+        
         {result && (
-          <div className="mt-8 p-6 bg-purple-100 rounded-2xl shadow-inner border-l-4 border-purple-500 animate-fade-in">
-            <h2 className="text-2xl font-bold mb-2 text-purple-800">🔥 Meme Lord TA's Roast 🔥</h2>
-            <pre className="whitespace-pre-wrap text-purple-900 font-mono">{result}</pre>
-          </div>
-        )}
+  <div className="mt-8 p-6 bg-purple-100 rounded-2xl shadow-inner border-l-4 border-purple-500 animate-fade-in">
+    <h2 className="text-2xl font-bold mb-2 text-purple-800">
+      🔥 Meme Lord TA's Roast 🔥
+    </h2>
+    <div className="prose prose-purple max-w-full text-purple-900">
+      <ReactMarkdown
+        children={result}
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+      />
+    </div>
+  </div>
+)}
+
       </div>
-      <div className="mt-12 text-sm text-purple-300 opacity-60">Built for engineering panic. No refunds.</div>
+      <div className="mt-12 text-sm text-purple-300 opacity-60">
+        Built for engineering panic. No refunds.
+      </div>
     </div>
   );
 }

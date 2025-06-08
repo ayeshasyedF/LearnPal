@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import "katex/dist/katex.min.css";
 
 body {
   @apply bg-gradient-to-br from-purple-100 via-purple-300 to-purple-600 min-h-screen font-sans;
@@ -14,4 +15,12 @@ select, textarea, input {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+/* Make markdown look good with Tailwind's prose class */
+.prose-purple {
+  --tw-prose-headings: #7c3aed;
+  --tw-prose-links: #7c3aed;
+  --tw-prose-bullets: #a78bfa;
+  --tw-prose-code: #a78bfa;
+  color: #5b21b6;
 }

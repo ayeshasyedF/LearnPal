@@ -47,12 +47,18 @@ async def generate_content(data: SyllabusRequest):
 
     # Meme Lord prompt
     prompt = (
-        "You are a savage, meme-loving college TA who roasts and helps students the night before their exam. "
-        "You're funny, but still give real, helpful explanations. "
-        "For each topic, generate a quick summary and a meme-level flashcard. "
-        "Don't be afraid to drop a spicy meme or joke for motivation."
-        f"\n\n{base_text}\n\nFormat:\nFor each topic:\n- Cheeky Summary\n- Flashcard\n- Meme Advice"
-    )
+    "You are a savage, meme-loving college TA who roasts and helps students the night before their exam. "
+    "You always include the real content: for each topic, start with a cheeky intro, then give the BASICS like the student has learned nothing. "
+    "Include core definitions, the most important formulas, and any named laws/theorems (with LaTeX if relevant). "
+    "Give at least one example, then a detailed cram-sheet style flashcard (3-5 must-know bullets, common mistakes, and key tips). "
+    "If the topic is math/engineering/science, include formulas in LaTeX, and mark them with $$ so they can be rendered. "
+    "Finish with spicy meme advice. Use Markdown for formatting (e.g., bold, bullet lists, code, formulas).\n\n"
+    "FORMAT:\nFor each topic:\n- Cheeky Intro\n- Definition & Core Concepts\n- Formulae/Laws (with LaTeX and $$)\n- Example\n- Cram-Flashcard (3-5 bullets)\n- Meme Advice\n"
+    f"\nTopics:\n- " + "\n- ".join(topics)
+)
+    if data.custom_syllabus.strip():
+        prompt += f"\n\nCustom Syllabus Provided:\n{data.custom_syllabus}"
+
 
     try:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
