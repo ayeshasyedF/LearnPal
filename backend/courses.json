@@ -1,0 +1,74 @@
+{
+  "mechanical": [
+    {
+      "name": "Statics",
+      "topics": [
+        "Equilibrium of particles and rigid bodies",
+        "Free-body diagrams",
+        "Structural analysis",
+        "Trusses and frames",
+        "Friction",
+        "Centroids and centers of gravity"
+      ]
+    },
+    {
+      "name": "Thermodynamics",
+      "topics": [
+        "Properties of pure substances",
+        "Energy and the first law",
+        "The second law and entropy",
+        "Cycles and engines",
+        "Refrigeration",
+        "Gas and vapor power cycles"
+      ]
+    }
+  ],
+  "electrical": [
+    {
+      "name": "Circuits I",
+      "topics": [
+        "Ohm’s Law",
+        "Kirchhoff’s Laws",
+        "Nodal and mesh analysis",
+        "Thevenin and Norton equivalents",
+        "RC and RL circuits",
+        "First-order circuits"
+      ]
+    },
+    {
+      "name": "Signals and Systems",
+      "topics": [
+        "Continuous-time signals",
+        "Discrete-time signals",
+        "Linear time-invariant systems",
+        "Convolution",
+        "Fourier series and transforms",
+        "Laplace transforms"
+      ]
+    }
+  ],
+  "computer": [
+    {
+      "name": "Data Structures",
+      "topics": [
+        "Arrays and linked lists",
+        "Stacks and queues",
+        "Trees and binary search trees",
+        "Hash tables",
+        "Graphs and traversals",
+        "Sorting and searching algorithms"
+      ]
+    },
+    {
+      "name": "Algorithms",
+      "topics": [
+        "Complexity analysis (Big O)",
+        "Divide and conquer",
+        "Dynamic programming",
+        "Greedy algorithms",
+        "Graph algorithms",
+        "Sorting algorithms"
+      ]
+    }
+  ]
+}

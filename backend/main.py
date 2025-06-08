@@ -1,72 +1,68 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
-from dotenv import load_dotenv
 import os
-import pdfplumber
-from io import BytesIO
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import openai
+import json
+from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # For local testing; restrict in prod!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def cheeky_ta_prompt(text: str) -> str:
-    return f"""
-I’m giving you a structured or, for that matter, an unstructured or poorly-organized lecture extract.
-Your mission: Summarize the main topics and subtopics, even if you have to reorganize or re-interpret the flow to make it logical for a student.
+# Load courses from JSON
+with open("courses.json", "r") as f:
+    COURSES = json.load(f)
 
-Cheeky TA Style Guide:
+# Models
+class SyllabusRequest(BaseModel):
+    faculty: str  # "mechanical", "electrical", "computer"
+    course: str   # e.g., "Statics"
+    topics: list[str] = []
+    custom_syllabus: str = ""
 
-Use your intelligence to:
+@app.get("/courses")
+def get_courses():
+    return COURSES
 
-Identify main topics and subtopics.
-Reorder and group the material logically (teach the basics before the advanced, fill in gaps if needed, skip redundancy).
-Only introduce advanced concepts after the foundational ones.
-For each topic:
-Give a quick, playful summary (“What’s the big idea here?”).
-Break it into subtopics as needed, with fun, memorable headings.
-Explain clearly, step by step, in simple language.
-List the most important takeaways for each subtopic as bullet points.
-End with a cheeky recap or a playful quiz.
-Make transitions obvious and fun (“Now that you’ve survived that, let’s tackle the next thing!”).
-Prioritize clarity and learning flow over sticking to the original order.
-Keep your tone playful, witty, and never boring.
-
-Your task:
-Using this guide, summarize and reorganize the following lecture content for a student who wants to actually understand the material:
-
-LECTURE TEXT:
-{text[:4000]}
-"""
-
-@app.post("/outline/")
-async def extract_outline(file: UploadFile = File(...)):
-    file_bytes = await file.read()
-    with pdfplumber.open(BytesIO(file_bytes)) as pdf:
-        text = ""
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-    if not text.strip():
-        return {"error": "No readable text found in the PDF."}
-
-    prompt = cheeky_ta_prompt(text)
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "Summarize and reorganize as instructed. Prioritize clarity and flow. Keep it playful and witty."},
-            {"role": "user", "content": prompt}
-        ]
+@app.post("/generate")
+async def generate_content(data: SyllabusRequest):
+    course_info = next(
+        (c for c in COURSES[data.faculty] if c["name"] == data.course),
+        None,
     )
-    result = response.choices[0].message.content.strip()
-    return {"outline": result}
+    topics = data.topics or (course_info["topics"] if course_info else [])
+    base_text = f"Course: {data.course}\nTopics:\n- " + "\n- ".join(topics)
+    if data.custom_syllabus.strip():
+        base_text += "\n\nCustom Syllabus Provided:\n" + data.custom_syllabus
+
+    # Meme Lord prompt
+    prompt = (
+        "You are a savage, meme-loving college TA who roasts and helps students the night before their exam. "
+        "You're funny, but still give real, helpful explanations. "
+        "For each topic, generate a quick summary and a meme-level flashcard. "
+        "Don't be afraid to drop a spicy meme or joke for motivation."
+        f"\n\n{base_text}\n\nFormat:\nFor each topic:\n- Cheeky Summary\n- Flashcard\n- Meme Advice"
+    )
+
+    try:
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1200,
+            temperature=0.85,
+        )
+        content = response.choices[0].message.content
+        return {"result": content}
+    except Exception as e:
+        return {"result": f"AI is napping: {str(e)}"}
