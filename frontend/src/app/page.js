@@ -5,12 +5,42 @@ import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "../../components/ui/accordion";
 
 const API_URL = "http://localhost:8000";
 
 const colorBg =
   "bg-gradient-to-br from-purple-200 via-purple-300 to-purple-600 min-h-screen";
 const panelBg = "bg-white bg-opacity-70 rounded-2xl shadow-2xl p-8";
+
+// Utility to split markdown sections based on ## headings
+// Split top-level topics (## ...)
+function splitTopicSections(markdown) {
+  const regex = /##\s+(.*)\n([\s\S]*?)(?=(?:\n##\s+|$))/g;
+  let match;
+  const topics = [];
+  while ((match = regex.exec(markdown)) !== null) {
+    topics.push({ topic: match[1].trim(), content: match[2].trim() });
+  }
+  return topics;
+}
+
+// Split each topic into subsections (### ...)
+function splitSubsections(markdown) {
+  const regex = /###\s+(.*)\n([\s\S]*?)(?=(?:\n###\s+|$))/g;
+  let match;
+  const sections = [];
+  while ((match = regex.exec(markdown)) !== null) {
+    sections.push({ title: match[1].trim(), content: match[2].trim() });
+  }
+  return sections;
+}
+
 
 export default function Page() {
   const [faculty, setFaculty] = useState("");
@@ -179,21 +209,47 @@ export default function Page() {
             {error}
           </div>
         )}
-        
+
         {result && (
-  <div className="mt-8 p-6 bg-purple-100 rounded-2xl shadow-inner border-l-4 border-purple-500 animate-fade-in">
-    <h2 className="text-2xl font-bold mb-2 text-purple-800">
+  <div className="mt-8">
+    <h2 className="text-2xl font-bold mb-4 text-purple-800">
       🔥 Meme Lord TA's Roast 🔥
     </h2>
-    <div className="prose prose-purple max-w-full text-purple-900">
-      <ReactMarkdown
-        children={result}
-        remarkPlugins={[remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-      />
-    </div>
+    <Accordion type="multiple" className="w-full">
+  {splitTopicSections(result).map((topic, i) => (
+    <AccordionItem key={topic.topic + i} value={topic.topic + i}>
+      <AccordionTrigger>
+        {topic.topic}
+      </AccordionTrigger>
+      <AccordionContent>
+        <Accordion type="multiple" className="w-full">
+          {splitSubsections(topic.content).map((section, j) => (
+            <AccordionItem key={section.title + j} value={section.title + j}>
+              <AccordionTrigger>
+                {section.title}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="bg-purple-50 rounded-xl p-4 mb-2 shadow-inner border border-purple-100">
+                  <div className="prose prose-purple max-w-full text-purple-900">
+                    <ReactMarkdown
+                      children={section.content}
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </AccordionContent>
+    </AccordionItem>
+  ))}
+</Accordion>
+
+
   </div>
-)}
+        )}
 
       </div>
       <div className="mt-12 text-sm text-purple-300 opacity-60">
