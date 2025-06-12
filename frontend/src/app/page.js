@@ -1,46 +1,14 @@
+// FILE: frontend/src/app/page.js
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "../../components/ui/accordion";
 
 const API_URL = "http://localhost:8000";
 
 const colorBg =
   "bg-gradient-to-br from-purple-200 via-purple-300 to-purple-600 min-h-screen";
 const panelBg = "bg-white bg-opacity-70 rounded-2xl shadow-2xl p-8";
-
-// Utility to split markdown sections based on ## headings
-// Split top-level topics (## ...)
-function splitTopicSections(markdown) {
-  const regex = /##\s+(.*)\n([\s\S]*?)(?=(?:\n##\s+|$))/g;
-  let match;
-  const topics = [];
-  while ((match = regex.exec(markdown)) !== null) {
-    topics.push({ topic: match[1].trim(), content: match[2].trim() });
-  }
-  return topics;
-}
-
-// Split each topic into subsections (### ...)
-function splitSubsections(markdown) {
-  const regex = /###\s+(.*)\n([\s\S]*?)(?=(?:\n###\s+|$))/g;
-  let match;
-  const sections = [];
-  while ((match = regex.exec(markdown)) !== null) {
-    sections.push({ title: match[1].trim(), content: match[2].trim() });
-  }
-  return sections;
-}
-
 
 export default function Page() {
   const [faculty, setFaculty] = useState("");
@@ -49,9 +17,9 @@ export default function Page() {
   const [topics, setTopics] = useState([]);
   const [checkedTopics, setCheckedTopics] = useState([]);
   const [customSyllabus, setCustomSyllabus] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState("");
   const [error, setError] = useState("");
+
+  const router = useRouter();
 
   useEffect(() => {
     axios
@@ -86,31 +54,13 @@ export default function Page() {
     );
   };
 
-  const handleSubmit = async (e) => {
+  const handleRedirect = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setResult("");
-    setError("");
-    try {
-      const res = await axios.post(`${API_URL}/generate`, {
-        faculty,
-        course,
-        topics: checkedTopics.length ? checkedTopics : topics,
-        custom_syllabus: customSyllabus,
-      });
-      setResult(res.data.result);
-    } catch (err) {
-      setError("Bruh. Something broke. Try again?");
-    }
-    setLoading(false);
+    router.push("/burn-my-brain");
   };
 
   return (
-    <div
-      className={
-        colorBg + " flex flex-col items-center justify-center py-12"
-      }
-    >
+    <div className={colorBg + " flex flex-col items-center justify-center py-12"}>
       <div className={panelBg + " max-w-2xl w-full"}>
         <h1 className="text-4xl font-black text-purple-800 mb-2 tracking-tight drop-shadow-lg">
           LearnPal 😛
@@ -119,8 +69,7 @@ export default function Page() {
           Your AI Meme Lord TA, here to roast you into passing.
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Faculty Dropdown */}
+        <form onSubmit={handleRedirect} className="flex flex-col gap-4">
           <div>
             <label className="font-bold text-purple-700">
               Pick your engineering type
@@ -139,7 +88,7 @@ export default function Page() {
               ))}
             </select>
           </div>
-          {/* Course Dropdown */}
+
           {faculty && (
             <div>
               <label className="font-bold text-purple-700">
@@ -160,7 +109,7 @@ export default function Page() {
               </select>
             </div>
           )}
-          {/* Topic Selection */}
+
           {faculty && course && topics.length > 0 && (
             <div>
               <label className="font-bold text-purple-700">
@@ -184,7 +133,7 @@ export default function Page() {
               </div>
             </div>
           )}
-          {/* Custom Syllabus */}
+
           <div>
             <label className="font-bold text-purple-700">
               Paste your own syllabus (optional)
@@ -196,62 +145,23 @@ export default function Page() {
               onChange={(e) => setCustomSyllabus(e.target.value)}
             />
           </div>
+
           <button
             className="mt-4 bg-gradient-to-r from-purple-400 via-purple-600 to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:scale-105 hover:bg-purple-800 transition-all text-lg"
-            disabled={loading || !faculty || !course}
             type="submit"
+            disabled={!faculty || !course}
           >
-            {loading ? "Summoning meme lord..." : "Cram Me"}
+            Cram Me
           </button>
         </form>
+
         {error && (
           <div className="mt-4 text-pink-700 bg-pink-100 p-3 rounded-xl text-center font-bold border border-pink-200">
             {error}
           </div>
         )}
-
-        {result && (
-  <div className="mt-8">
-    <h2 className="text-2xl font-bold mb-4 text-purple-800">
-      🔥 Meme Lord TA's Roast 🔥
-    </h2>
-    <Accordion type="multiple" className="w-full">
-  {splitTopicSections(result).map((topic, i) => (
-    <AccordionItem key={topic.topic + i} value={topic.topic + i}>
-      <AccordionTrigger>
-        {topic.topic}
-      </AccordionTrigger>
-      <AccordionContent>
-        <Accordion type="multiple" className="w-full">
-          {splitSubsections(topic.content).map((section, j) => (
-            <AccordionItem key={section.title + j} value={section.title + j}>
-              <AccordionTrigger>
-                {section.title}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="bg-purple-50 rounded-xl p-4 mb-2 shadow-inner border border-purple-100">
-                  <div className="prose prose-purple max-w-full text-purple-900">
-                    <ReactMarkdown
-                      children={section.content}
-                      remarkPlugins={[remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                    />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </AccordionContent>
-    </AccordionItem>
-  ))}
-</Accordion>
-
-
-  </div>
-        )}
-
       </div>
+
       <div className="mt-12 text-sm text-purple-300 opacity-60">
         Built for engineering panic. No refunds.
       </div>
