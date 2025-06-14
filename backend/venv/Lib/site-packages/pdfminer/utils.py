@@ -34,7 +34,6 @@ import charset_normalizer  # For str encoding detection
 # still uses 32 bits ints
 INF = (1 << 31) - 1
 
-
 FileOrName = Union[pathlib.PurePath, str, io.IOBase]
 AnyIO = Union[TextIO, BinaryIO]
 
@@ -124,6 +123,32 @@ def paeth_predictor(left: int, above: int, upper_left: int) -> int:
         return above
     else:
         return upper_left
+
+
+def apply_tiff_predictor(
+    colors: int, columns: int, bitspercomponent: int, data: bytes
+) -> bytes:
+    """Reverse the effect of the TIFF predictor 2
+
+    Documentation: https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf (Section 14, page 64)
+    """
+    if bitspercomponent != 8:
+        error_msg = f"Unsupported `bitspercomponent': {bitspercomponent}"
+        raise PDFValueError(error_msg)
+    bpp = colors * (bitspercomponent // 8)
+    nbytes = columns * bpp
+    buf: List[int] = []
+    for scanline_i in range(0, len(data), nbytes):
+        raw: List[int] = []
+        for i in range(nbytes):
+            new_value = data[scanline_i + i]
+            if i >= bpp:
+                new_value += raw[i - bpp]
+                new_value %= 256
+            raw.append(new_value)
+        buf.extend(raw)
+
+    return bytes(buf)
 
 
 def apply_png_predictor(
@@ -264,17 +289,51 @@ def mult_matrix(m1: Matrix, m0: Matrix) -> Matrix:
 
 
 def translate_matrix(m: Matrix, v: Point) -> Matrix:
-    """Translates a matrix by (x, y)."""
+    """Translates a matrix by (x, y) inside the projection.
+
+    The matrix is changed so that its origin is at the specified point in its own
+    coordinate system. Note that this is different from translating it within the
+    original coordinate system."""
     (a, b, c, d, e, f) = m
     (x, y) = v
     return a, b, c, d, x * a + y * c + e, x * b + y * d + f
 
 
 def apply_matrix_pt(m: Matrix, v: Point) -> Point:
+    """Applies a matrix to a point."""
     (a, b, c, d, e, f) = m
     (x, y) = v
-    """Applies a matrix to a point."""
     return a * x + c * y + e, b * x + d * y + f
+
+
+def apply_matrix_rect(m: Matrix, rect: Rect) -> Rect:
+    """Applies a matrix to a rectangle.
+
+    Note that the result is not a rotated rectangle, but a rectangle with the same
+    orientation that tightly fits the outside of the rotated content.
+
+    :param m: The rotation matrix.
+    :param rect: The rectangle coordinates (x0, y0, x1, y1), where x0 < x1 and y0 < y1.
+    :returns a rectangle with the same orientation, but that would fit the rotated
+        content.
+    """
+    (x0, y0, x1, y1) = rect
+    left_bottom = (x0, y0)
+    right_bottom = (x1, y0)
+    right_top = (x1, y1)
+    left_top = (x0, y1)
+
+    (left1, bottom1) = apply_matrix_pt(m, left_bottom)
+    (right1, bottom2) = apply_matrix_pt(m, right_bottom)
+    (right2, top1) = apply_matrix_pt(m, right_top)
+    (left2, top2) = apply_matrix_pt(m, left_top)
+
+    return (
+        min(left1, left2, right1, right2),
+        min(bottom1, bottom2, top1, top2),
+        max(left1, left2, right1, right2),
+        max(bottom1, bottom2, top1, top2),
+    )
 
 
 def apply_matrix_norm(m: Matrix, v: Point) -> Point:
@@ -803,3 +862,26 @@ def format_int_alpha(value: int) -> str:
 
     result.reverse()
     return "".join(result)
+
+
+def unpad_aes(padded: bytes) -> bytes:
+    """Remove block padding as described in PDF 1.7 section 7.6.2:
+
+    > For an original message length of M, the pad shall consist of 16 -
+    (M mod 16) bytes whose value shall also be 16 - (M mod 16).
+    > Note that the pad is present when M is evenly divisible by 16;
+    it contains 16 bytes of 0x10.
+    """
+    if len(padded) == 0:
+        return padded
+    # Check for a potential padding byte (bytes are unsigned)
+    padding = padded[-1]
+    if padding > 16:
+        return padded
+    # A valid padding byte is the length of the padding
+    if padding > len(padded):  # Obviously invalid
+        return padded
+    # Every byte of padding is equal to the length of padding
+    if all(x == padding for x in padded[-padding:]):
+        return padded[:-padding]
+    return padded

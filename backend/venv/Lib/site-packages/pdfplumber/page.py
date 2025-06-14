@@ -100,29 +100,6 @@ def fix_fontname_bytes(fontname: bytes) -> str:
     return str(prefix)[2:-1] + suffix_new
 
 
-def separate_pattern(
-    color: Tuple[Any, ...]
-) -> Tuple[Optional[Tuple[Union[float, int], ...]], Optional[str]]:
-    if isinstance(color[-1], PSLiteral):
-        return (color[:-1] or None), decode_text(color[-1].name)
-    else:
-        return color, None
-
-
-def normalize_color(
-    color: Any,
-) -> Tuple[Optional[Tuple[Union[float, int], ...]], Optional[str]]:
-    if color is None:
-        return (None, None)
-    elif isinstance(color, tuple):
-        tuplefied = color
-    elif isinstance(color, list):
-        tuplefied = tuple(color)
-    else:
-        tuplefied = (color,)
-    return separate_pattern(tuplefied)
-
-
 def tuplify_list_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
     return {
         key: (tuple(value) if isinstance(value, list) else value)
@@ -239,11 +216,14 @@ class Page(Container):
 
         self.mediabox = _invert_box(mb_raw, mb_height)
 
-        if "CropBox" in page_obj.attrs:
-            self.cropbox = _invert_box(
-                _normalize_box(get_attr("CropBox"), self.rotation), mb_height
-            )
-        else:
+        for box_name in ["CropBox", "TrimBox", "BleedBox", "ArtBox"]:
+            if box_name in page_obj.attrs:
+                box_normalized = _invert_box(
+                    _normalize_box(get_attr(box_name), self.rotation), mb_height
+                )
+                setattr(self, box_name.lower(), box_normalized)
+
+        if "CropBox" not in page_obj.attrs:
             self.cropbox = self.mediabox
 
         # Page.bbox defaults to self.mediabox, but can be altered by Page.crop(...)
@@ -395,13 +375,6 @@ class Page(Container):
             if hasattr(obj, cs):
                 attr[cs] = resolve_and_decode(getattr(obj, cs).name)
 
-        for color_attr, pattern_attr in [
-            ("stroking_color", "stroking_pattern"),
-            ("non_stroking_color", "non_stroking_pattern"),
-        ]:
-            if color_attr in attr:
-                attr[color_attr], attr[pattern_attr] = normalize_color(attr[color_attr])
-
         if isinstance(obj, (LTChar, LTTextContainer)):
             text = obj.get_text()
             attr["text"] = (
@@ -415,11 +388,11 @@ class Page(Container):
             # directly expose .stroking_color and .non_stroking_color
             # for LTChar objects (unlike, e.g., LTRect objects).
             gs = obj.graphicstate
-            attr["stroking_color"], attr["stroking_pattern"] = normalize_color(
-                gs.scolor
+            attr["stroking_color"] = (
+                gs.scolor if isinstance(gs.scolor, tuple) else (gs.scolor,)
             )
-            attr["non_stroking_color"], attr["non_stroking_pattern"] = normalize_color(
-                gs.ncolor
+            attr["non_stroking_color"] = (
+                gs.ncolor if isinstance(gs.ncolor, tuple) else (gs.ncolor,)
             )
 
             # Handle (rare) byte-encoded fontnames

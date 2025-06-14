@@ -1,20 +1,22 @@
 # FILE: main.py
+
 import os
+import json
+import openai
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import openai
-import json
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables (make sure .env contains OPENAI_API_KEY)
 load_dotenv()
 
 app = FastAPI()
 
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For local testing; restrict in prod!
+    allow_origins=["*"],  # For dev only; restrict in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,8 +30,33 @@ with open("courses.json", "r") as f:
 def get_courses():
     return COURSES
 
-# ---------- NEW AI ROUTES ----------
+# --------- ROAST EXPLAIN ENDPOINT ----------
+class RoastRequest(BaseModel):
+    course: str
+    topic: str
 
+@app.post("/roast-explain")
+async def roast_explain(data: RoastRequest):
+    prompt = (
+        f"You are an insanely sarcastic, ballsy, and savage engineering TA. "
+        f"Roast the student while explaining the concept of '{data.topic}' from the course '{data.course}'. "
+        f"Be witty, savage, but also explain it in a way that actually helps them learn, even if they're crying inside. "
+        f"Make it funny, ruthless, and unforgettable."
+    )
+    try:
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.85,
+            max_tokens=320,
+        )
+        explanation = response.choices[0].message.content.strip()
+        return {"roast": explanation}
+    except Exception as e:
+        return {"error": str(e)}
+
+# --------- DESCRIBE VISUAL ENDPOINT ----------
 class ShortPrompt(BaseModel):
     prompt: str
 
@@ -46,7 +73,6 @@ Now expand this one:
 
 "{data.prompt}"
 """
-
     try:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(
@@ -58,6 +84,7 @@ Now expand this one:
     except Exception as e:
         return {"error": str(e)}
 
+# --------- GENERATE SVG ENDPOINT ----------
 class VisualDescription(BaseModel):
     description: str
 
@@ -71,7 +98,6 @@ Description:
 
 Respond ONLY with the SVG code.
 """
-
     try:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.chat.completions.create(

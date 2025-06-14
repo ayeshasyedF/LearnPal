@@ -8,6 +8,9 @@ from typing import Any, DefaultDict, Dict, List
 
 from .pdf import PDF
 
+if len(sys.argv) == 1:
+    sys.argv.append("--help")
+
 
 def parse_page_spec(p_str: str) -> List[int]:
     if "-" in p_str:
