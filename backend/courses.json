@@ -27,8 +27,8 @@
     {
       "name": "Circuits I",
       "topics": [
-        "Ohm’s Law",
-        "Kirchhoff’s Laws",
+        "Ohm Law",
+        "Kirchhoff Laws",
         "Nodal and mesh analysis",
         "Thevenin and Norton equivalents",
         "RC and RL circuits",

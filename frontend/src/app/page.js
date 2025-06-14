@@ -7,8 +7,8 @@ import axios from "axios";
 const API_URL = "http://localhost:8000";
 
 const colorBg =
-  "bg-gradient-to-br from-purple-200 via-purple-300 to-purple-600 min-h-screen";
-const panelBg = "bg-white bg-opacity-70 rounded-2xl shadow-2xl p-8";
+  "bg-gradient-to-br from-[#0a0014] via-[#1a002d] to-[#3b1c6b] min-h-screen text-white";
+const panelBg = "bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/10 text-white";
 
 export default function Page() {
   const [faculty, setFaculty] = useState("");
@@ -62,64 +62,70 @@ export default function Page() {
   return (
     <div className={colorBg + " flex flex-col items-center justify-center py-12"}>
       <div className={panelBg + " max-w-2xl w-full"}>
-        <h1 className="text-4xl font-black text-purple-800 mb-2 tracking-tight drop-shadow-lg">
-          LearnPal 😛
+        <h1 className="text-4xl font-black text-white mb-2 tracking-tight drop-shadow-lg">
+          ShrEdu
         </h1>
-        <div className="mb-4 text-md font-medium text-purple-700 italic">
+        <div className="mb-4 text-md font-medium text-purple-300 italic">
           Your AI Meme Lord TA, here to roast you into passing.
         </div>
 
         <form onSubmit={handleRedirect} className="flex flex-col gap-4">
           <div>
-            <label className="font-bold text-purple-700">
+            <label className="font-bold text-purple-300">
               Pick your engineering type
             </label>
-            <select
-              className="w-full mt-1 rounded-xl border border-purple-300 p-2 focus:ring-2 focus:ring-purple-400"
-              value={faculty}
-              onChange={(e) => setFaculty(e.target.value)}
-              required
-            >
-              <option value="">-- Choose Faculty --</option>
-              {Object.keys(courses).map((fac) => (
-                <option key={fac} value={fac}>
-                  {fac.charAt(0).toUpperCase() + fac.slice(1)}
-                </option>
-              ))}
-            </select>
+            <div className="relative mt-1">
+              <select
+                className="w-full rounded-xl border border-purple-300 bg-white text-gray-900 p-3 focus:ring-2 focus:ring-purple-500 focus:outline-none shadow-md transition-all"
+                value={faculty}
+                onChange={(e) => setFaculty(e.target.value)}
+                required
+              >
+                <option value="">-- Choose Faculty --</option>
+                {Object.keys(courses).map((fac) => (
+                  <option key={fac} value={fac} className="text-black">
+                    {fac.charAt(0).toUpperCase() + fac.slice(1)}
+                  </option>
+                ))}
+              </select>
+              
+            </div>
           </div>
 
           {faculty && (
             <div>
-              <label className="font-bold text-purple-700">
+              <label className="font-bold text-purple-300">
                 Pick your course
               </label>
-              <select
-                className="w-full mt-1 rounded-xl border border-purple-300 p-2 focus:ring-2 focus:ring-purple-400"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                required
-              >
-                <option value="">-- Choose Course --</option>
-                {courses[faculty]?.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative mt-1">
+                <select
+                  className="w-full rounded-xl border border-purple-300 bg-white text-gray-900 p-3 focus:ring-2 focus:ring-purple-500 focus:outline-none shadow-md transition-all"
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                  required
+                >
+                  <option value="">-- Choose Course --</option>
+                  {courses[faculty]?.map((c) => (
+                    <option key={c.name} value={c.name} className="text-black">
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                
+              </div>
             </div>
           )}
 
           {faculty && course && topics.length > 0 && (
             <div>
-              <label className="font-bold text-purple-700">
+              <label className="font-bold text-purple-300">
                 Topics to roast (leave empty for all):
               </label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {topics.map((t) => (
                   <label
                     key={t}
-                    className="bg-purple-100 px-3 py-1 rounded-xl text-sm flex items-center cursor-pointer"
+                    className="bg-purple-800/40 px-3 py-1 rounded-xl text-sm flex items-center cursor-pointer border border-purple-500"
                   >
                     <input
                       type="checkbox"
@@ -135,11 +141,11 @@ export default function Page() {
           )}
 
           <div>
-            <label className="font-bold text-purple-700">
+            <label className="font-bold text-purple-300">
               Paste your own syllabus (optional)
             </label>
             <textarea
-              className="w-full mt-1 rounded-xl border border-purple-300 p-2 focus:ring-2 focus:ring-purple-400 min-h-[80px]"
+              className="w-full mt-1 rounded-xl border border-purple-500 bg-white/10 text-white placeholder-purple-300 p-2 focus:ring-2 focus:ring-purple-600 min-h-[80px]"
               placeholder="Copy-paste your prof's cryptic syllabus here if you want even more targeted roasting."
               value={customSyllabus}
               onChange={(e) => setCustomSyllabus(e.target.value)}
@@ -147,16 +153,16 @@ export default function Page() {
           </div>
 
           <button
-            className="mt-4 bg-gradient-to-r from-purple-400 via-purple-600 to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:scale-105 hover:bg-purple-800 transition-all text-lg"
+            className="mt-4 bg-gradient-to-r from-purple-500 via-purple-700 to-purple-800 text-white font-bold py-3 px-10 rounded-full shadow-lg hover:scale-110 hover:brightness-110 transition-all text-lg"
             type="submit"
             disabled={!faculty || !course}
           >
-            Cram Me
+            GO
           </button>
         </form>
 
         {error && (
-          <div className="mt-4 text-pink-700 bg-pink-100 p-3 rounded-xl text-center font-bold border border-pink-200">
+          <div className="mt-4 text-pink-300 bg-pink-900 bg-opacity-20 border border-pink-500/50 p-3 rounded-xl text-center font-bold">
             {error}
           </div>
         )}
