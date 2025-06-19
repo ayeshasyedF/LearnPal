@@ -1,33 +1,46 @@
-#main.py
 import os
 import json
 import sqlite3
+from uuid import uuid4
+from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import openai
 from dotenv import load_dotenv
-from uuid import uuid4
-from datetime import datetime
+import openai
 
 # Load environment variables
 load_dotenv()
 
+# --- FastAPI setup ---
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # For development only; restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Mount static file path (for uploads)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# --- Load courses ---
+with open("courses.json", "r") as f:
+    COURSES = json.load(f)
+
+@app.get("/courses")
+def get_courses():
+    return COURSES
+
 # --- Dummy Login Users ---
 DUMMY_USERS = [
     {"username": "you", "password": "unicorn123", "role": "admin"},
     {"username": "your_friend", "password": "banana42", "role": "user"},
+    {"username": "sneaky_rat", "password": "cheese99", "role": "user"},
+    {"username": "electro_girl", "password": "voltage88", "role": "user"},
 ]
 
 class LoginInput(BaseModel):
@@ -44,38 +57,43 @@ def login(data: LoginInput):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = f"fake-{user['username']}-token"
     return {"username": user["username"], "role": user["role"], "token": token}
+# --- Roast Explain Endpoint ---
+class RoastRequest(BaseModel):
+    course: str
+    topic: str
 
-# --- INIT DB ---
-DB_PATH = "epic_resources.db"
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+@app.post("/roast-explain")
+async def roast_explain(data: RoastRequest):
+    prompt = (
+    f"You are an insanely sarcastic, yet genius engineering TA. "
+    f"You're here to break down the topic '{data.topic}' from the course '{data.course}' in a way that makes the student learn *despite themselves*.\n\n"
+    f"Here’s your structure:\n"
+    f"1. Start with a sarcastic roast about why they clearly didn’t get it (1-2 lines).\n"
+    f"2. List ALL the key subtopics or concepts they should have understood.\n"
+    f"3. For each concept:\n"
+    f"   - Explain it in clear, step-by-step teaching.\n"
+    f"   - Call out common mistakes *with sass*.\n"
+    f"   - Drop analogies or mnemonics if needed (but no fluff).\n"
+    f"4. End with a mic-drop line or roast that they’ll never forget.\n\n"
+    f"Make it funny, structured, ruthless — but make sure they **learn** everything properly by the end."
+    f"Feel free to include formulas or equations using LaTeX-style syntax (e.g., $E = mc^2$ or $$PV = nRT$$), especially when explaining technical concepts — the frontend can render them. Wrap inline formulas in $...$ and block formulas in $$...$$ for LaTeX rendering."
 
-conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-cursor = conn.cursor()
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS resources (
-    id TEXT PRIMARY KEY,
-    title TEXT,
-    type TEXT,
-    url TEXT,
-    submitted_by TEXT,
-    tags TEXT,
-    ratings TEXT,
-    avg_rating REAL,
-    created_at TIMESTAMP
-)
-''')
-conn.commit()
+    )
 
-# --- COURSES ---
-with open("courses.json", "r") as f:
-    COURSES = json.load(f)
+    try:
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.85,
+            max_tokens=5000,
+        )
+        explanation = response.choices[0].message.content.strip()
+        return {"roast": explanation}
+    except Exception as e:
+        return {"error": str(e)}
 
-@app.get("/courses")
-def get_courses():
-    return COURSES
-
-# --- AI ROUTES ---
+# --- Visual Description & SVG Generation ---
 class ShortPrompt(BaseModel):
     prompt: str
 
@@ -146,9 +164,29 @@ Convert the following structured description into a **clean**, **minimal** SVG:
         return {"svg": svg_output if svg_output else "No SVG generated."}
     except Exception as e:
         return {"error": str(e)}
+# --- Database setup for EPIC Resources ---
+DB_PATH = "epic_resources.db"
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- EPIC RESOURCE ROUTES ---
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+cursor = conn.cursor()
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS resources (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    type TEXT,
+    url TEXT,
+    submitted_by TEXT,
+    tags TEXT,
+    ratings TEXT,
+    avg_rating REAL,
+    created_at TIMESTAMP
+)
+''')
+conn.commit()
 
+# --- Upload resource with tags ---
 @app.post("/upload-resource")
 async def upload_resource(
     title: str = Form(...),
@@ -164,9 +202,10 @@ async def upload_resource(
     if file:
         ext = os.path.splitext(file.filename)[1]
         filename = f"{resource_id}{ext}"
-        filepath = os.path.join(UPLOAD_DIR, filename)
+        filepath = os.path.join(UPLOAD_DIR, filename).replace("\\", "/")
         with open(filepath, "wb") as f:
             f.write(await file.read())
+
 
     cursor.execute('''
         INSERT INTO resources (id, title, type, url, submitted_by, tags, ratings, avg_rating, created_at)
@@ -176,6 +215,7 @@ async def upload_resource(
 
     return {"success": True, "id": resource_id}
 
+# --- Get all resources (sorted by avg rating) ---
 @app.get("/epic-resources")
 def get_epic_resources():
     cursor.execute("SELECT * FROM resources ORDER BY avg_rating DESC")
@@ -183,17 +223,39 @@ def get_epic_resources():
     keys = [desc[0] for desc in cursor.description]
     resources = [dict(zip(keys, row)) for row in rows]
     return resources
-
+# --- Rate a resource (one-time per user) ---
 @app.post("/rate-resource")
-async def rate_resource(resource_id: str = Form(...), rating: int = Form(...)):
+async def rate_resource(
+    resource_id: str = Form(...),
+    rating: int = Form(...),
+    Authorization: str = Header(...)
+):
+    if not Authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    token = Authorization.replace("Bearer ", "")
+    username = token.replace("fake-", "").replace("-token", "")
+    user = next((u for u in DUMMY_USERS if u["username"] == username), None)
+
+    if not user:
+        raise HTTPException(status_code=403, detail="Invalid user")
+
     cursor.execute("SELECT ratings FROM resources WHERE id = ?", (resource_id,))
     row = cursor.fetchone()
     if not row:
         return JSONResponse(status_code=404, content={"error": "Resource not found"})
 
-    ratings = json.loads(row[0])
-    ratings.append(rating)
-    avg = sum(ratings) / len(ratings)
+    try:
+        ratings = json.loads(row[0]) if row[0] else []
+    except:
+        ratings = []
+
+    # Check if user already rated
+    if any(r["user"] == username for r in ratings):
+        return JSONResponse(status_code=400, content={"error": "You have already rated this resource."})
+
+    ratings.append({"user": username, "rating": rating})
+    avg = sum(r["rating"] for r in ratings) / len(ratings)
 
     cursor.execute("UPDATE resources SET ratings = ?, avg_rating = ? WHERE id = ?",
                    (json.dumps(ratings), avg, resource_id))
@@ -201,13 +263,17 @@ async def rate_resource(resource_id: str = Form(...), rating: int = Form(...)):
 
     return {"success": True, "new_avg": avg}
 
+# --- Delete a resource (admin only) ---
 @app.delete("/delete-resource/{resource_id}")
 def delete_resource(resource_id: str, Authorization: str = Header(...)):
     if not Authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     token = Authorization.replace("Bearer ", "")
-    if not token.startswith("fake-you"):
+    username = token.replace("fake-", "").replace("-token", "")
+    user = next((u for u in DUMMY_USERS if u["username"] == username), None)
+
+    if not user or user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
 
     cursor.execute("SELECT url FROM resources WHERE id = ?", (resource_id,))

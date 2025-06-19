@@ -33,24 +33,26 @@ const UploadPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1a002d] via-purple-900 to-indigo-900 flex items-center justify-center p-4 text-white font-[Inter]">
-      <div className="bg-white bg-opacity-10 backdrop-blur-sm border border-white/20 p-8 rounded-3xl shadow-2xl w-full max-w-2xl">
-        <h1 className="text-4xl font-bold font-[Broadway] text-white text-center mb-6 drop-shadow">
-          Upload Epic Resource 
+    <div className="min-h-screen bg-black text-white font-[Inter] px-4 py-20 flex items-center justify-center">
+      <div className="bg-white/10 backdrop-blur-lg border border-purple-600 p-8 rounded-3xl shadow-xl w-full max-w-2xl">
+        <h1 className="text-4xl font-extrabold text-center mb-6">
+          <span className="text-white">Upload </span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-indigo-400">Epic</span>
+          <span className="text-white"> Resource</span>
         </h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-sm">
           <input
             type="text"
             placeholder="Title (e.g. Best W Diagram Ever)"
-            className="p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="p-3 rounded-xl bg-white/10 border border-purple-400 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
 
           <select
-            className="p-3 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="p-3 rounded-xl bg-white text-black border border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={type}
             onChange={(e) => setType(e.target.value)}
           >
@@ -62,7 +64,7 @@ const UploadPage = () => {
           <input
             type="text"
             placeholder="Your name / username"
-            className="p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="p-3 rounded-xl bg-white/10 border border-purple-400 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={submittedBy}
             onChange={(e) => setSubmittedBy(e.target.value)}
             required
@@ -71,7 +73,7 @@ const UploadPage = () => {
           <input
             type="text"
             placeholder="Tags (comma separated)"
-            className="p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="p-3 rounded-xl bg-white/10 border border-purple-400 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
           />
@@ -79,7 +81,7 @@ const UploadPage = () => {
           <input
             type="url"
             placeholder="Link (if applicable)"
-            className="p-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="p-3 rounded-xl bg-white/10 border border-purple-400 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
@@ -87,20 +89,20 @@ const UploadPage = () => {
           <input
             type="file"
             accept="image/*,video/*"
-            className="p-2 rounded-xl bg-white/10 border border-white/20 text-white"
+            className="p-2 rounded-xl bg-white/10 border border-purple-400 text-white"
             onChange={(e) => setFile(e.target.files[0])}
           />
 
           <button
             type="submit"
-            className="mt-4 bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:brightness-110 text-white font-bold py-3 px-6 rounded-full shadow-md hover:scale-105 transition-all"
+            className="mt-4 bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900 hover:brightness-110 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:scale-105 transition-all"
           >
-            🌟 Upload Resource 🌟
+            Upload 
           </button>
         </form>
 
         {message && (
-          <div className="mt-4 text-center font-semibold text-purple-200">
+          <div className="mt-4 text-center font-semibold text-purple-300">
             {message}
           </div>
         )}

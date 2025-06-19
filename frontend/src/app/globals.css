@@ -3,24 +3,61 @@
 @tailwind utilities;
 @import "katex/dist/katex.min.css";
 
+/* 🌌 Default page styles */
 body {
-  @apply bg-gradient-to-br from-purple-100 via-purple-300 to-purple-600 min-h-screen font-sans;
+  @apply bg-black text-purple-300 min-h-screen font-sans antialiased;
 }
-select, textarea, input {
-  @apply focus:ring-purple-400;
+
+/* 💫 Inputs */
+select,
+textarea,
+input {
+  @apply text-black focus:ring-purple-400 rounded-md shadow-sm;
 }
+
+/* ✨ Animation */
 .animate-fade-in {
-  animation: fadeIn 0.8s;
+  animation: fadeIn 0.8s ease-in-out;
 }
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-/* Make markdown look good with Tailwind's prose class */
+
+/* 📘 Tailwind Prose for markdown-style roast output */
 .prose-purple {
-  --tw-prose-headings: #7c3aed;
-  --tw-prose-links: #7c3aed;
+  @apply prose prose-invert;
+  --tw-prose-headings: #c084fc;
+  --tw-prose-body: #e9d5ff;
+  --tw-prose-bold: #e879f9;
+  --tw-prose-links: #d8b4fe;
   --tw-prose-bullets: #a78bfa;
-  --tw-prose-code: #a78bfa;
-  color: #5b21b6;
+  --tw-prose-code: #facc15;
+  --tw-prose-quotes: #7e22ce;
+  --tw-prose-pre-bg: #1e1b4b;
+  color: #e9d5ff;
+}
+
+/* 👻 Optional shimmer effect for loading roast */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(147, 51, 234, 0.1) 25%,
+    rgba(147, 51, 234, 0.2) 50%,
+    rgba(147, 51, 234, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
