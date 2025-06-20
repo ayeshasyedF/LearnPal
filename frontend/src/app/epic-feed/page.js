@@ -8,6 +8,7 @@ const API_URL = "http://localhost:8000";
 const EpicFeed = () => {
   const [resources, setResources] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [search, setSearch] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -66,18 +67,19 @@ const EpicFeed = () => {
     }
   };
 
- const getYouTubeEmbedUrl = (url) => {
-  try {
-    const yt = new URL(url);
-    const id =
-      yt.hostname === "youtu.be"
-        ? yt.pathname.slice(1)
-        : yt.searchParams.get("v");
-    return id ? `https://www.youtube.com/embed/${id}` : null;
-  } catch {
-    return null;
-  }
-};
+  const getYouTubeEmbedUrl = (url) => {
+    try {
+      const yt = new URL(url);
+      const id = yt.hostname === "youtu.be" ? yt.pathname.slice(1) : yt.searchParams.get("v");
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const filteredResources = search
+    ? resources.filter((r) => r.title.toLowerCase().includes(search.toLowerCase()) || r.tags.toLowerCase().includes(search.toLowerCase()))
+    : resources;
 
   return (
     <div className="min-h-screen bg-black text-white font-[Inter] px-6 py-20">
@@ -86,15 +88,25 @@ const EpicFeed = () => {
         <span className="text-white"> Resources</span>
       </h1>
 
+      <div className="max-w-3xl mx-auto mb-10">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by title or tags..."
+          className="w-full px-4 py-2 rounded-lg text-black border border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-        {resources.map((r) => {
+        {filteredResources.map((r) => {
           const isYouTube = getYouTubeEmbedUrl(r.url);
           const tagList = r.tags?.split(",").map((t) => t.trim()).filter(Boolean);
           const isImage = r.type?.startsWith("image") && r.url && !isYouTube;
           const isVideo = r.type?.startsWith("video") && r.url && !isYouTube;
           const imageUrl = r.url?.startsWith("http")
-  ? r.url
-  : `${API_URL}/uploads/${encodeURIComponent(r.url.split("/").pop())}`;
+            ? r.url
+            : `${API_URL}/uploads/${encodeURIComponent(r.url.split("/").pop())}`;
 
           return (
             <div
@@ -139,7 +151,9 @@ const EpicFeed = () => {
               )}
 
               {isImage && (
-                <img src={imageUrl} onError={(e) => e.currentTarget.src = "/fallback-image.svg"}
+                <img
+                  src={imageUrl}
+                  onError={(e) => (e.currentTarget.src = "/fallback-image.svg")}
                   alt={r.title}
                   className="rounded-lg max-h-48 object-cover mb-2 w-full"
                 />
@@ -154,15 +168,15 @@ const EpicFeed = () => {
               )}
 
               <div className="mt-2">
-  <a
-    href={imageUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-sm text-blue-300 underline hover:text-blue-400"
-  >
-    🔗 View File
-  </a>
-</div>
+                <a
+                  href={imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-300 underline hover:text-blue-400"
+                >
+                  🔗 View File
+                </a>
+              </div>
 
               <div className="text-sm text-yellow-300 font-bold mb-2">
                 Avg. Rating: ⭐ {r.avg_rating?.toFixed(1)}
