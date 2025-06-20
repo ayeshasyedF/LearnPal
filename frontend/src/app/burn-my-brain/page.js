@@ -88,14 +88,19 @@ export default function BurnMyBrain() {
           onClick={saveRoast}
           className="mb-6 bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg transition"
         >
-          Save This Roast 💾
+          Save Roast
         </button>
       )}
 
       <div className="w-full max-w-4xl space-y-4">
         {sections.map(({ heading, body, id }) => (
           <details key={id} className="bg-zinc-900 border border-purple-700 rounded-xl shadow-lg p-4" open={id === 0}>
-            <summary className="cursor-pointer text-lg font-bold text-purple-300">{heading}</summary>
+            <summary className="cursor-pointer text-lg font-bold text-purple-300">
+  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+    {heading}
+  </ReactMarkdown>
+</summary>
+
             <div className="prose prose-purple prose-invert mt-2">
               <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{body}</ReactMarkdown>
             </div>
