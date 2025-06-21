@@ -17,41 +17,51 @@ export default function BurnMyBrain() {
   const [resources, setResources] = useState([]);
 
   useEffect(() => {
-    const roastParam = searchParams.get("roast");
-    const courseParam = searchParams.get("courseName");
-    const topicParam = searchParams.get("topic");
+  const roastParam = searchParams.get("roast");
+  const courseParam = searchParams.get("courseName");
+  const topicParam = searchParams.get("topic");
 
-    if (roastParam && courseParam && topicParam) {
-      const decoded = decodeURIComponent(roastParam);
-      setRoast(decoded);
-      setCourseName(courseParam);
-      setTopic(topicParam);
+  if (roastParam && courseParam && topicParam) {
+    let decoded = roastParam;
+    try {
+      decoded = decodeURIComponent(roastParam);
+    } catch (err) {
+      console.warn("Failed to decode roastParam:", roastParam, err);
+    }
 
-      let split = decoded.split(/####\s+/).filter(Boolean);
-      if (split.length < 2) split = decoded.split(/###\s+/).filter(Boolean);
-      if (split.length < 2) split = decoded.split(/\n(?=\d+\.\s+\*\*)/).filter(Boolean);
+    setRoast(decoded);
+    setCourseName(courseParam);
+    setTopic(topicParam);
 
-      const sectioned = split.map((block, i) => {
-        const lines = block.trim().split("\n");
-        const heading = lines[0].trim();
-        const body = lines.slice(1).join("\n").trim();
-        return {
-          heading: heading || (i === 0 ? "🔥 Introduction" : `Section ${i + 1}`),
-          body,
-          id: i,
-        };
-      });
+    let split = decoded.split(/####\s+/).filter(Boolean);
+    if (split.length < 2) split = decoded.split(/###\s+/).filter(Boolean);
+    if (split.length < 2) split = decoded.split(/\n(?=\d+\.\s+\*\*)/).filter(Boolean);
+
+    const sectioned = split.map((block, i) => {
+      const lines = block.trim().split("\n");
+      const heading = lines[0].trim();
+      const body = lines.slice(1).join("\n").trim();
+      return {
+        heading: heading || (i === 0 ? "🔥 Introduction" : `Section ${i + 1}`),
+        body,
+        id: i,
+      };
+    });
 
       setSections(sectioned);
 
       axios
         .get(`${API_URL}/epic-resources`)
         .then((res) => {
-          const filtered = res.data.filter((r) => r.tags?.toLowerCase().includes(topicParam.toLowerCase()));
-          const sorted = filtered.sort((a, b) => b.avg_rating - a.avg_rating);
-          setResources(sorted);
-        })
-        .catch(() => setResources([]));
+         const filtered = res.data.filter((r) => {
+  const tags = r.tags?.split(",").map((t) => t.trim().toLowerCase()) || [];
+  return tags.some((tag) => topicParam.toLowerCase().includes(tag));
+});
+const sorted = filtered.sort((a, b) => b.avg_rating - a.avg_rating);
+setResources(sorted);
+})
+.catch(() => setResources([]));
+
     }
   }, [searchParams]);
 
